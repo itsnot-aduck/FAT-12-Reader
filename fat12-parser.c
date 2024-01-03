@@ -38,7 +38,7 @@ static FAT12_Status_t FAT12_BS_Read(){
 
 FAT12_Status_t FAT12_read_file(char* file){
     FAT12_Status_t status = READ_FAILED;
-    fptr = fopen(file, "rb");
+    fptr = fopen(file, "rb+");
     if (fptr != NULL){
         status = FAT12_SUCCESS;
     }
