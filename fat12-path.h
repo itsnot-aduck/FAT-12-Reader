@@ -3,6 +3,8 @@
 
 #include "fat12-config.h"
 
-
-
+void PATH_move_to_child(char* node);
+void PATH_back_to_father();
+void PATH_back_to_root();
+void Path_Get_Current();
 #endif /*__FAT12_PATH__*/
