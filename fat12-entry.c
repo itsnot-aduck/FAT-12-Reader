@@ -41,12 +41,13 @@ void getModiTimeFromFileEnt( const file_entry* ent, time* Mod_Time)
     Mod_Time -> minute = (ent->DIR_Modi_Time & 0x07E0) >> 5;
     Mod_Time -> second  = (ent->DIR_Modi_Time & 0x001F) << 1;
 }
-void FAT12_linked_list_add(file_entry data){
+void FAT12_linked_list_add(file_entry data, uint32_t address){
     file_entry_info *temp = malloc(sizeof(file_entry_info));
     if (temp != NULL){
         if (size == 0){
             instance = malloc(sizeof(file_entry_info));
             instance->data = data;
+            instance->address = address;
             instance->pNext = NULL;
             size++;
         }
@@ -60,6 +61,7 @@ void FAT12_linked_list_add(file_entry data){
             /* Add the element */
             pCursor-> pNext = temp;
             temp -> data = data;
+            temp -> address = address;
             temp -> pNext = NULL;
             size++;
             }       
@@ -83,34 +85,32 @@ void FAT12_linked_list_remove(){
 
 void FAT12_GetDirectory(int cluster){
     log("Check dir entry at cluster %d", cluster);
+    uint32_t addr_cursor;
     if (instance != NULL){
         FAT12_linked_list_remove();
     }
+    /* Identify root dir and data clus */
+    if (cluster == 0){
+        addr_cursor = FAT12_BS_Stat.RootAddr;
+    }
     else{
-        /* Identify root dir and data clus */
-        if (cluster == 0){
-            fseek(fptr,FAT12_BS_Stat.RootAddr, SEEK_SET);
-        }
-        else{
-            cluster -= 2;
-            fseek(fptr,FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize, SEEK_SET);
-            log("start address: 0x%X", FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize);
-        }
-        
-        file_entry entry;
-        /* if not root (cluster != 0). bypass the e ntry */
-
-        while (ftell(fptr)) {
-            fread(&entry, sizeof(file_entry), 1, fptr);
-            log("Entry to read %s with attribute %d and dir_reserved %d", entry.DIR_Name, entry.DIR_Attr, entry.DIR_Reserved);
-            // if ((entry.DIR_Attr == 0x00) && (entry.DIR_Reserved == 0x00))
-            if (entry.DIR_Name[0] == 0x00)
-                break;
-            if (entry.DIR_Name[0] != 0xE5 && entry.DIR_Name[2] != 0){
-                FAT12_linked_list_add(entry);
-                log("Added");
-            }
-    
+        cluster -= 2;
+        addr_cursor = FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize;
+    }
+    log("Start address: 0x%X", addr_cursor);
+    fseek(fptr,addr_cursor, SEEK_SET);
+    file_entry entry;
+    while (ftell(fptr)) {
+        /* Cursor has shifted to the right 32 byte */
+        fread(&entry, sizeof(file_entry), 1, fptr);
+        log("Entry to read %s with attribute %d and dir_reserved %d", entry.DIR_Name, entry.DIR_Attr, entry.DIR_Reserved);
+        // if ((entry.DIR_Attr == 0x00) && (entry.DIR_Reserved == 0x00))
+        if (entry.DIR_Name[0] == 0x00)
+            break;
+        if (entry.DIR_Name[0] != 0xE5 && entry.DIR_Name[2] != 0){
+            addr_cursor = ftell(fptr) - 32;
+            FAT12_linked_list_add(entry, addr_cursor);
+            log("Added Succesfully the node in address 0x%X", addr_cursor);
         }
     }
 }

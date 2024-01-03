@@ -38,11 +38,10 @@ typedef struct file_entry {
     DWORD   DIR_FileSize;
 } __attribute__((packed)) file_entry; 
 
-
-/* Tao struct phu luu thong tin cua cac node (khong luu het entry) */
-
 typedef struct node{
     file_entry data;
+    /* address of entry in file */
+    uint32_t address; 
     struct node *pNext;
 } file_entry_info;
 
