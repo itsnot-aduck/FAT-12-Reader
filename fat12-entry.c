@@ -82,11 +82,13 @@ void FAT12_linked_list_remove(){
 }
 
 void FAT12_GetDirectory(int cluster){
+    /* Identify root dir and data clus */
     if (cluster == 0){
         fseek(fptr,FAT12_BS_Stat.RootAddr, SEEK_SET);
     }
     else{
         fseek(fptr,FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize, SEEK_SET);
+        log("start address: 0x%X", FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize);
     }
     
     file_entry entry;
@@ -94,7 +96,8 @@ void FAT12_GetDirectory(int cluster){
 
     while (ftell(fptr)) {
         fread(&entry, sizeof(file_entry), 1, fptr);
-        if ((entry.DIR_Attr == 0x00)&& (entry.DIR_Reserved == 0x00))
+        log("Entry to read %s with attribute %d and dir_reserved %d", entry.DIR_Name, entry.DIR_Attr, entry.DIR_Reserved);
+        if ((entry.DIR_Attr == 0x00) && (entry.DIR_Reserved == 0x00))
             break;
         if (entry.DIR_Name[0] != 0xE5 && entry.DIR_Name[2] != 0){
             FAT12_linked_list_add(entry);

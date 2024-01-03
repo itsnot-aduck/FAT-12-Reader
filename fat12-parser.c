@@ -8,13 +8,13 @@ FAT12_BS_Stat_t FAT12_BS_Stat = {0};
 void FAT12_BS_Param_Cal(){
     /* Calulate size of each part */
     FAT12_BS_Stat.FatSize = FAT12_BS_Info.BPB_NumFATs * FAT12_BS_Info.BPB_FATSz16;
-    FAT12_BS_Stat.RootSize = (32 * FAT12_BS_Info.BPB_RootEntCnt) / 512;
+    FAT12_BS_Stat.RootSize = (32 * FAT12_BS_Info.BPB_RootEntCnt) / FAT12_BS_Info.BPB_BytsPerSec;
     FAT12_BS_Stat.DataSize = FAT12_BS_Info.BPB_TotSec16 - FAT12_BS_Stat.FatSize - FAT12_BS_Stat.RootSize - 1;
 
     /* Calculate the start address */
     FAT12_BS_Stat.FatAddr = 0x200; //Second sector
-    FAT12_BS_Stat.RootAddr = FAT12_BS_Stat.FatAddr + FAT12_BS_Stat.FatSize * 512;
-    FAT12_BS_Stat.DataAddr = FAT12_BS_Stat.RootAddr + FAT12_BS_Stat.RootSize * 512;
+    FAT12_BS_Stat.RootAddr = FAT12_BS_Stat.FatAddr + FAT12_BS_Stat.FatSize * FAT12_BS_Info.BPB_BytsPerSec;
+    FAT12_BS_Stat.DataAddr = FAT12_BS_Stat.RootAddr + FAT12_BS_Stat.RootSize * FAT12_BS_Info.BPB_BytsPerSec;
     FAT12_BS_Stat.ClusSize = FAT12_BS_Info.BPB_BytsPerSec * FAT12_BS_Info.BPB_SecPerClus;
     log("FatSize: %d, RootSize: %d, DataSize: %d", FAT12_BS_Stat.FatSize, FAT12_BS_Stat.RootSize, FAT12_BS_Stat.DataSize);
     log("FatAddr: 0x%X, RootAddr: 0x%X, DataAddr: 0x%X", FAT12_BS_Stat.FatAddr, FAT12_BS_Stat.RootAddr, FAT12_BS_Stat.DataAddr);
@@ -44,7 +44,7 @@ FAT12_Status_t FAT12_read_file(char* file){
     }
     log("open %s with status %d", status ? "Failed" : "Success", status);
     log("Read BS stat of FAT12 File: ");
-    FAT12_BS_Read();
+    status = FAT12_BS_Read();
     return status;
 }
 
