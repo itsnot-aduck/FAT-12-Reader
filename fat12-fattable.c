@@ -38,3 +38,13 @@ void FAT12_Fat_Free(int num){
         fputc(EleArray[i], fptr);
     }
 }
+
+
+uint16_t FAT12_Get_First_Available(){
+    int i;
+    for (i = 0; i < FAT12_BS_Stat.DataAddr; i++){
+        if(FAT12_Fat_Read(i) == 0x00)
+        break;
+    }
+    return i;
+}
