@@ -2,15 +2,11 @@
 #include <stdlib.h>
 #include "fat12-parser.h"
 #include "fat12-entry.h"
+#include "fat12-fattable.h"
 #include <string.h>
 #include <time.h>
 
 #define ROOT_DIRECTORY_OFFSET 0x00002600
-/* Linked list information of node */
-// typedef struct node{
-//     file_entry data;
-//     struct node *pNext;
-// } file_entry_info;
 
 /* Initialize the instance of linked list*/
 file_entry_info *instance = NULL;
@@ -94,23 +90,32 @@ void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time) {
     Mod_Time->second = (ent->DIR_Modi_Time & 0x001F) << 1;
 }
 
-int createFolder(const char* folderName, FILE* file) {
-    file_entry newFolderEntry;
-    fseek(file, ROOT_DIRECTORY_OFFSET, SEEK_SET);
-
-    // Find an empty entry in the root directory
-    while (1) {
-        size_t bytesRead = fread(&newFolderEntry, sizeof(file_entry), 1, file);
-
-        if (bytesRead != 1) {
-            perror("Error reading directory entry");
-            return 1;
+uint32_t FAT12_Get_Available_Address(){
+    uint32_t address;
+    file_entry_info *pCursor = instance;
+    /* Find for available entry as deleted file */
+    while(pCursor -> pNext != NULL){
+        if (pCursor->data.DIR_Name[0] == 0xE5){
+            address = pCursor->address;
+            break;
         }
-        if (newFolderEntry.DIR_Name[0] == 0x00 || newFolderEntry.DIR_Name[0] == 0xE5) {
-            break; // Found an empty or deleted entry
-        }
+        pCursor = pCursor -> pNext;
     }
+    if(pCursor ->pNext == NULL){
+        /* Available element is next to the last element */
+        address = pCursor->address + 32;
+    }
+    log("Found available address at 0x%X", address);
+    return address;
+}
 
+int FAT12_Create_Folder(const char* folderName) {
+    /* Create instance for new folder */
+    file_entry newFolderEntry;
+    /* Get position for new folder */
+    uint32_t position = FAT12_Get_Available_Address();
+    log("Move to the position 0x%X", position);
+    fseek(fptr, position, SEEK_SET);
     // Set attributes for the new folder
     memset(&newFolderEntry, 0, sizeof(file_entry));
     strncpy((char*)newFolderEntry.DIR_Name, folderName, 8);
@@ -126,9 +131,17 @@ int createFolder(const char* folderName, FILE* file) {
     newFolderEntry.DIR_Modi_Time = newFolderEntry.DIR_Cre_Time;
     newFolderEntry.DIR_Modi_Date = newFolderEntry.DIR_Cre_Date;
 
-    // Write the new folder entry to the root directory
-    fseek(file, -((long)sizeof(file_entry)), SEEK_CUR); // Move back to the empty entry
-    fwrite(&newFolderEntry, sizeof(file_entry), 1, file);
+    /* Get the position of folder content */
+    newFolderEntry.DIR_FstClus = FAT12_Get_First_Available();
+
+    /* When the cluster is occupied, make this cluster busy */
+    FAT12_Fat_Set_Full(newFolderEntry.DIR_FstClus);
+
+
+    // fseek(fptr, -((long)sizeof(file_entry)), SEEK_CUR); // Move back to the empty entry
+    /* Re-move into the file */
+    fseek(fptr, position, SEEK_SET);
+    fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
 
     return 0;
 }
@@ -175,13 +188,8 @@ void FAT12_linked_list_remove(){
     }
 }
 
-void FAT12_GetDirectory(int cluster){
-    log("Check dir entry at cluster %d", cluster);
+uint32_t FAT12_Get_Cluster_Addr(int cluster){
     uint32_t addr_cursor;
-    if (instance != NULL){
-        FAT12_linked_list_remove();
-    }
-    /* Identify root dir and data clus */
     if (cluster == 0){
         addr_cursor = FAT12_BS_Stat.RootAddr;
     }
@@ -189,6 +197,16 @@ void FAT12_GetDirectory(int cluster){
         cluster -= 2;
         addr_cursor = FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize;
     }
+    return addr_cursor;
+}
+
+void FAT12_GetDirectory(int cluster){
+    log("Check dir entry at cluster %d", cluster);
+    uint32_t addr_cursor = FAT12_Get_Cluster_Addr(cluster);
+    if (instance != NULL){
+        FAT12_linked_list_remove();
+    }
+    /* Identify root dir and data clus */
     log("Start address: 0x%X", addr_cursor);
     fseek(fptr,addr_cursor, SEEK_SET);
     file_entry entry;
@@ -199,7 +217,7 @@ void FAT12_GetDirectory(int cluster){
         // if ((entry.DIR_Attr == 0x00) && (entry.DIR_Reserved == 0x00))
         if (entry.DIR_Name[0] == 0x00)
             break;
-        if (entry.DIR_Name[0] != 0xE5 && entry.DIR_Name[2] != 0){
+        if (entry.DIR_Name[2] != 0){
             addr_cursor = ftell(fptr) - 32;
             FAT12_linked_list_add(entry, addr_cursor);
             log("Added Succesfully the node in address 0x%X", addr_cursor);

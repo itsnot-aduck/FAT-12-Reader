@@ -68,5 +68,6 @@ uint16_t FAT12_Get_First_Available(){
             break;
         }
     }
+    log("Get the free Entry is %d", position);
     return position;
 }

@@ -49,6 +49,7 @@ extern file_entry_info *instance;
 
 void FAT12_GetDirectory(int cluster);
 void FAT12_Directory_Export();
+int FAT12_Create_Folder(const char* folderName);
 
 #endif
 /* __FAT12_ENTRY_H__ */
