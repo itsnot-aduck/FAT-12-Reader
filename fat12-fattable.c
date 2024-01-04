@@ -39,6 +39,26 @@ void FAT12_Fat_Free(int num){
     }
 }
 
+void FAT12_Fat_Set_Full(int num){
+    fseek(fptr, 0x200 + num/2*3, SEEK_SET);
+    uint16_t result;
+    uint8_t EleArray[3];
+    fread(EleArray, 1, 3, fptr);
+    log("Read: %d %d %d\n", EleArray[0], EleArray[1], EleArray[2]);
+    if ( num % 2 == 0){
+        EleArray[0] = 0xFF;
+        EleArray[1] &= (EleArray[1] & 0xF0) + 0x0F; 
+    }
+    else {
+        EleArray[2] = 0xFF;
+        EleArray[1] = (EleArray[1] & 0xF) + 0xF0;
+    }                                                                                                                        
+    /* Back cursor */
+    fseek(fptr, 0x200 + num/2*3, SEEK_SET);                                                                                                                                                                                                  
+    for (int i = 0; i < 3; i++){
+        fputc(EleArray[i], fptr);
+    }
+}
 
 uint16_t FAT12_Get_First_Available(){
     int i;
