@@ -11,6 +11,7 @@
 /* Initialize the instance of linked list*/
 file_entry_info *instance = NULL;
 static int size = 0;
+uint32_t current_Cluster = 0;
 
 typedef struct my_time {
     int year;
@@ -20,6 +21,9 @@ typedef struct my_time {
     int minute;
     int second;
 } my_time;
+
+/* Private Function prototype */
+void FAT12_Reload_Directory();
 
 void getCurrentTime(my_time* current) {
     time_t t = time(NULL);
@@ -142,7 +146,7 @@ int FAT12_Create_Folder(const char* folderName) {
     /* Re-move into the file */
     fseek(fptr, position, SEEK_SET);
     fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
-
+    FAT12_Reload_Directory();
     return 0;
 }
 
@@ -201,6 +205,8 @@ uint32_t FAT12_Get_Cluster_Addr(int cluster){
 }
 
 void FAT12_GetDirectory(int cluster){
+    /* Assign for the current cluster */
+    current_Cluster = cluster;
     log("Check dir entry at cluster %d", cluster);
     uint32_t addr_cursor = FAT12_Get_Cluster_Addr(cluster);
     if (instance != NULL){
@@ -223,6 +229,10 @@ void FAT12_GetDirectory(int cluster){
             log("Added Succesfully the node in address 0x%X", addr_cursor);
         }
     }
+}
+
+void FAT12_Reload_Directory(){
+    FAT12_GetDirectory(current_Cluster);
 }
 
 void printFileEntry(const file_entry *entry) {
