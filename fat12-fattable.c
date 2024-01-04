@@ -47,7 +47,7 @@ void FAT12_Fat_Set_Full(int num){
     log("Read: %d %d %d\n", EleArray[0], EleArray[1], EleArray[2]);
     if ( num % 2 == 0){
         EleArray[0] = 0xFF;
-        EleArray[1] &= (EleArray[1] & 0xF0) + 0x0F; 
+        EleArray[1] = (EleArray[1] & 0xF0) + 0x0F; 
     }
     else {
         EleArray[2] = 0xFF;
