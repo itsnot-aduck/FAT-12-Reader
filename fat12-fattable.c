@@ -61,10 +61,12 @@ void FAT12_Fat_Set_Full(int num){
 }
 
 uint16_t FAT12_Get_First_Available(){
-    int i;
-    for (i = 0; i < FAT12_BS_Stat.DataAddr; i++){
-        if(FAT12_Fat_Read(i) == 0x00)
-        break;
+    int position = -2;
+    for (int i = 2; i < FAT12_BS_Stat.DataAddr; i++){
+        if(FAT12_Fat_Read(i) == 0x00){
+            position = i;
+            break;
+        }
     }
-    return i;
+    return position;
 }
