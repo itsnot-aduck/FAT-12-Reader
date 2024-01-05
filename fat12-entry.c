@@ -23,10 +23,20 @@ typedef struct my_time {
 } my_time;
 
 /* Private Function prototype */
-void FAT12_Reload_Directory();
-uint32_t FAT12_Get_Cluster_Addr(int cluster);
+static void getCurrentTime(my_time* current);
+static void printFileAttribute(BYTE attribute);
+static void getWrtTimeFromFileEnt(const file_entry* ent, my_time* Cre_Time);
+static void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time);
+static uint32_t FAT12_Get_Available_Address();
+static void FAT12_Write_Folder_Info(int cluster);
+static void FAT12_linked_list_add(file_entry data, uint32_t address);
+static void FAT12_linked_list_remove();
+static uint32_t FAT12_Get_Cluster_Addr(int cluster);
+static void FAT12_Reload_Directory();
+static void printFileEntry(const file_entry *entry);
 
-void getCurrentTime(my_time* current) {
+/* Private function definition */
+static void getCurrentTime(my_time* current) {
     time_t t = time(NULL);
     struct tm *tm_info = localtime(&t);
 
@@ -38,7 +48,7 @@ void getCurrentTime(my_time* current) {
     current->second = tm_info->tm_sec;
 }
 
-void printFileAttribute(BYTE attribute) {
+static void printFileAttribute(BYTE attribute) {
     switch (attribute) {
         case FILE_ATTR_TXT:
             printf("File");
@@ -77,7 +87,7 @@ void printFileAttribute(BYTE attribute) {
 }
 
 
-void getWrtTimeFromFileEnt(const file_entry* ent, my_time* Cre_Time) {
+static void getWrtTimeFromFileEnt(const file_entry* ent, my_time* Cre_Time) {
     Cre_Time->year = ((ent->DIR_Cre_Date & 0xFE00) >> 9) + 1980;
     Cre_Time->month = (ent->DIR_Cre_Date & 0x01E0) >> 5;
     Cre_Time->day = (ent->DIR_Cre_Date & 0x001F);
@@ -86,7 +96,7 @@ void getWrtTimeFromFileEnt(const file_entry* ent, my_time* Cre_Time) {
     Cre_Time->second = (ent->DIR_Cre_Time & 0x001F) << 1;
 }
 
-void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time) {
+static void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time) {
     Mod_Time->year = ((ent->DIR_Modi_Date & 0xFE00) >> 9) + 1980;
     Mod_Time->month = (ent->DIR_Modi_Date & 0x01E0) >> 5;
     Mod_Time->day = (ent->DIR_Modi_Date & 0x001F);
@@ -95,7 +105,7 @@ void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time) {
     Mod_Time->second = (ent->DIR_Modi_Time & 0x001F) << 1;
 }
 
-uint32_t FAT12_Get_Available_Address(){
+static uint32_t FAT12_Get_Available_Address(){
     uint32_t address;
     file_entry_info *pCursor = instance;
     /* Find for available entry as deleted file */
@@ -114,7 +124,7 @@ uint32_t FAT12_Get_Available_Address(){
     return address;
 }
 
-void FAT12_Write_Folder_Info(int cluster){
+static void FAT12_Write_Folder_Info(int cluster){
     int clusterAddr = ((cluster - 2) + 19 + 14) * 512;
     fseek(fptr, clusterAddr ,SEEK_SET);
     log("Write first information of file on cluster %d", clusterAddr);
@@ -126,44 +136,27 @@ void FAT12_Write_Folder_Info(int cluster){
     log("Insert information of folder successfully");
 }
 
-int FAT12_Create_Folder(const char* folderName) {
-    /* Create instance for new folder */
-    file_entry newFolderEntry;
-    /* Get position for new folder */
-    uint32_t position = FAT12_Get_Available_Address();
-    log("Move to the position 0x%X", position);
-    fseek(fptr, position, SEEK_SET);
-    // Set attributes for the new folder
-    memset(&newFolderEntry, 0, sizeof(file_entry));
-    strncpy((char*)newFolderEntry.DIR_Name, folderName, 8);
-    newFolderEntry.DIR_Attr = FILE_ATTR_DIR;
-    
-    // Get current time
-    my_time currentTime;
-    getCurrentTime(&currentTime);
+static void printFileEntry(const file_entry *entry) {
+    my_time Cre_Time;
+    my_time Mod_Time;
 
-    // Set folder creation and modification times
-    newFolderEntry.DIR_Cre_Time = (currentTime.hour << 11) | (currentTime.minute << 5) | (currentTime.second >> 1);
-    newFolderEntry.DIR_Cre_Date = ((currentTime.year - 1980) << 9) | (currentTime.month << 5) | currentTime.day;
-    newFolderEntry.DIR_Modi_Time = newFolderEntry.DIR_Cre_Time;
-    newFolderEntry.DIR_Modi_Date = newFolderEntry.DIR_Cre_Date;
+    if (entry->DIR_Attr == FILE_ATTR_LSN || entry->DIR_Name[0] == 0xE5) {
+        return;
+    }
 
-    /* Get the position of folder content */
-    newFolderEntry.DIR_FstClus = FAT12_Get_First_Available();
+    printf("%-20s", entry->DIR_Name);
+    printFileAttribute(entry->DIR_Attr);
 
-    /* When the cluster is occupied, make this cluster busy */
-    FAT12_Fat_Set_Full(newFolderEntry.DIR_FstClus);
+    getWrtTimeFromFileEnt(entry, &Cre_Time);
+    printf("%-20s", ""); // Độ rộng 20 kí tự trắng
+    printf("%04d-%02d-%02d %02d:%02d:%02d\t\t", Cre_Time.year, Cre_Time.month, Cre_Time.day, Cre_Time.hour,
+           Cre_Time.minute, Cre_Time.second);
 
+    getModiTimeFromFileEnt(entry, &Mod_Time);
+    printf("%04d-%02d-%02d %02d:%02d:%02d\t", Mod_Time.year, Mod_Time.month, Mod_Time.day, Mod_Time.hour,
+           Mod_Time.minute, Mod_Time.second);
 
-    /* Re-move into the file */
-    fseek(fptr, position, SEEK_SET);
-    fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
-
-    /* Write information of father and itself on the data cluster */
-    FAT12_Write_Folder_Info(newFolderEntry.DIR_FstClus);
-    /* Reload the directory */
-    FAT12_Reload_Directory();
-    return 0;
+    printf("%u bytes\n", entry->DIR_FileSize);
 }
 
 void FAT12_linked_list_add(file_entry data, uint32_t address){
@@ -194,7 +187,7 @@ void FAT12_linked_list_add(file_entry data, uint32_t address){
     }
 }
 
-void FAT12_linked_list_remove(){
+static void FAT12_linked_list_remove(){
     if (size != 0 && instance != NULL){
         file_entry_info *pCursor = instance, *temp;
         while(pCursor -> pNext != NULL){
@@ -208,7 +201,7 @@ void FAT12_linked_list_remove(){
     }
 }
 
-uint32_t FAT12_Get_Cluster_Addr(int cluster){
+static uint32_t FAT12_Get_Cluster_Addr(int cluster){
     uint32_t addr_cursor;
     if (cluster == 0){
         addr_cursor = FAT12_BS_Stat.RootAddr;
@@ -218,6 +211,50 @@ uint32_t FAT12_Get_Cluster_Addr(int cluster){
         addr_cursor = FAT12_BS_Stat.DataAddr + cluster * FAT12_BS_Stat.ClusSize;
     }
     return addr_cursor;
+}
+
+static void FAT12_Reload_Directory(){
+    FAT12_GetDirectory(current_Cluster);
+}
+
+/* Public function definition */
+int FAT12_Create_Folder(const char* folderName) {
+    /* Create instance for new folder */
+    file_entry newFolderEntry;
+    /* Get position for new folder */
+    uint32_t position = FAT12_Get_Available_Address();
+    log("Move to the position 0x%X", position);
+    fseek(fptr, position, SEEK_SET);
+    // Set attributes for the new folder
+    memset(&newFolderEntry, 0, sizeof(file_entry));
+    strncpy((char*)newFolderEntry.DIR_Name, folderName, 8);
+    newFolderEntry.DIR_Attr = FILE_ATTR_DIR;
+    
+    // Get current time
+    my_time currentTime;
+    getCurrentTime(&currentTime);
+
+    // Set folder creation and modification times
+    newFolderEntry.DIR_Cre_Time = (currentTime.hour << 11) | (currentTime.minute << 5) | (currentTime.second >> 1);
+    newFolderEntry.DIR_Cre_Date = ((currentTime.year - 1980) << 9) | (currentTime.month << 5) | currentTime.day;
+    newFolderEntry.DIR_Modi_Time = newFolderEntry.DIR_Cre_Time;
+    newFolderEntry.DIR_Modi_Date = newFolderEntry.DIR_Cre_Date;
+
+    /* Get the position of folder content */
+    newFolderEntry.DIR_FstClus = FAT12_Get_First_Available();
+
+    /* When the cluster is occupied, make this cluster busy */
+    FAT12_Fat_Set_Full(newFolderEntry.DIR_FstClus);
+
+    /* Re-move into the file */
+    fseek(fptr, position, SEEK_SET);
+    fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
+
+    /* Write information of father and itself on the data cluster */
+    FAT12_Write_Folder_Info(newFolderEntry.DIR_FstClus);
+    /* Reload the directory */
+    FAT12_Reload_Directory();
+    return 0;
 }
 
 void FAT12_GetDirectory(int cluster){
@@ -245,33 +282,6 @@ void FAT12_GetDirectory(int cluster){
             log("Added Succesfully the node in address 0x%X", addr_cursor);
         }
     }
-}
-
-void FAT12_Reload_Directory(){
-    FAT12_GetDirectory(current_Cluster);
-}
-
-void printFileEntry(const file_entry *entry) {
-    my_time Cre_Time;
-    my_time Mod_Time;
-
-    if (entry->DIR_Attr == FILE_ATTR_LSN || entry->DIR_Name[0] == 0xE5) {
-        return;
-    }
-
-    printf("%-20s", entry->DIR_Name);
-    printFileAttribute(entry->DIR_Attr);
-
-    getWrtTimeFromFileEnt(entry, &Cre_Time);
-    printf("%-20s", ""); // Độ rộng 20 kí tự trắng
-    printf("%04d-%02d-%02d %02d:%02d:%02d\t\t", Cre_Time.year, Cre_Time.month, Cre_Time.day, Cre_Time.hour,
-           Cre_Time.minute, Cre_Time.second);
-
-    getModiTimeFromFileEnt(entry, &Mod_Time);
-    printf("%04d-%02d-%02d %02d:%02d:%02d\t", Mod_Time.year, Mod_Time.month, Mod_Time.day, Mod_Time.hour,
-           Mod_Time.minute, Mod_Time.second);
-
-    printf("%u bytes\n", entry->DIR_FileSize);
 }
 
 void FAT12_Directory_Export(){

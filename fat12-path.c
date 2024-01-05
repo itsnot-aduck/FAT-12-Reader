@@ -18,8 +18,9 @@ uint8_t depth = 0;
 
 void PATH_move_to_child(char* node){
     if (strstr(node, ".."))
-    {
-        PATH_back_to_father();
+    {   
+        if (depth > 0)
+            PATH_back_to_father();
     }
     else{
         PathNode *tmp = (PathNode*) malloc(sizeof(PathNode));
@@ -79,12 +80,3 @@ void Path_Get_Current(){
     }
     printf("$");
 }
-
-// int main(){
-//     PATH_move_to_child("Hi0");
-//     PATH_move_to_child("Hi");
-//     PATH_move_to_child("Hi2");
-//     PATH_back_to_root();
-//     Path_Get_Current();
-//     return 0;
-// }
