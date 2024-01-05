@@ -12,8 +12,8 @@ int main(){
     // printf("Before: %X %X\n", FAT12_Fat_Read(2), FAT12_Fat_Read(3));
     // FAT12_Fat_Free(3);
     // printf("After: %X %X\n", FAT12_Fat_Read(2), FAT12_Fat_Read(3));
-    FAT12_Create_Folder("Phuong");
-    FAT12_Create_Folder("Anh");
+    FAT12_Create_Folder("Demo4");
+    FAT12_GetDirectory(18);
     FAT12_Directory_Export();
     FAT12_close_file();
     return 0;

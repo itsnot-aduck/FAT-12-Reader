@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include "fat12-entry.h"
 #include "fat12-checkInput.h"
 
 FAT12_Input_t CheckInput(char *input, char *name_tmp)

@@ -1,5 +1,6 @@
 #ifndef __FAT12_CHECKINPUT_H__
 #define __FAT12_CHECKINPUT_H__
+#include "fat12-entry.h"
 
 typedef enum {
     FAT12_List,                 //"ls"   //0

@@ -24,6 +24,7 @@ typedef struct my_time {
 
 /* Private Function prototype */
 void FAT12_Reload_Directory();
+uint32_t FAT12_Get_Cluster_Addr(int cluster);
 
 void getCurrentTime(my_time* current) {
     time_t t = time(NULL);
@@ -113,6 +114,18 @@ uint32_t FAT12_Get_Available_Address(){
     return address;
 }
 
+void FAT12_Write_Folder_Info(int cluster){
+    int clusterAddr = ((cluster - 2) + 19 + 14) * 512;
+    fseek(fptr, clusterAddr ,SEEK_SET);
+    log("Write first information of file on cluster %d", clusterAddr);
+    uint8_t chunk[64] = {0x2E, 0x20, 0x20, 0x20, 0x20,0x20,0x20,0x20,0x20,0x20,0x20, 0x10, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, cluster<<4 & 0xF, cluster*16 & 0xF0, 0x00, 0x00, 0x00, 0x00,
+                        0x2E, 0x2E, 0x20, 0x20, 0x20,0x20,0x20,0x20,0x20,0x20,0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, current_Cluster*16 & 0x0F, current_Cluster*16 & 0xF0, 0x00, 0x00, 0x00};
+    fwrite(chunk, sizeof(chunk), 1, fptr);
+    log("Insert information of folder successfully");
+}
+
 int FAT12_Create_Folder(const char* folderName) {
     /* Create instance for new folder */
     file_entry newFolderEntry;
@@ -142,10 +155,13 @@ int FAT12_Create_Folder(const char* folderName) {
     FAT12_Fat_Set_Full(newFolderEntry.DIR_FstClus);
 
 
-    // fseek(fptr, -((long)sizeof(file_entry)), SEEK_CUR); // Move back to the empty entry
     /* Re-move into the file */
     fseek(fptr, position, SEEK_SET);
     fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
+
+    /* Write information of father and itself on the data cluster */
+    FAT12_Write_Folder_Info(newFolderEntry.DIR_FstClus);
+    /* Reload the directory */
     FAT12_Reload_Directory();
     return 0;
 }
