@@ -1,29 +1,14 @@
 # FAT-12-Reader
 C Program to Read FAT12 Floppy Disk 
 
+This project was made by:
 
-## tương tác với FAT File
-- Mở file (folder, program) -> cat name
-- Mở folder
-- Thêm
-- Xóa 
-- (Optional) Đổi tên file
+- Hoang Minh Duc (PM): General Algorithm & Project structure, reading file contents, reading fat table, file interaction (Remove Item), Command Line Interface, organize the code convention (45%)
 
-## Các hàm cần triển
-cat - đọc dữ liệu từ 1 file
-- FindName(char *name) => Trả về cluster, -1 nếu không phải
+- Nguyen Minh Tien: General concepts of FAT12 structure, supporter on making CLIs (20%)
 
-cd - chuyển folder 
-- ChangeDir(char *name) 
+- Dinh Tien Huy: Read boot sector and calculate parameters of the image file, initialize concept of path. (15%)
 
-Rm (void) - xóa file hoặc folder 
-/* Check xem có extension hay không (check bằng dấu .) */
-- RemoveDỉr()
-     - Remove từng file 1 
-     - Filename có byte đầu là E5
-- Removefile
-    - Free cluster list của nó. 
+- Dao Xuan Son: Make concept of reading items in folder, read root entry, file interaction (Create Folder) (20%)  
 
-====> GetDataClusArr, GetFatClusAddr => Set lại giá trị về 0 (available)
-- Hàm sửa giá trị các FAT Entry
-FAT12_Fat_write(Fat entry, value)
+This project may be buggy or defected and lead to unwanted experience
