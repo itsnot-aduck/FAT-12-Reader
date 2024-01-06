@@ -5,17 +5,17 @@
 #include "fat12-err.h"
 
 char* message[11] = {
-    "",                                     //FAT12_SUCCESS
-    "ERR: Full storage\n",                  //FAT12_FULL_STORAGE
-    "ERR: Cmd not found\n",                 //FAT12_CLI_UNFOUND_CMD
-    "ERR: Wrong number of agrs\n",          //FAT12_CLI_INVALID_CMD
-    "ERR: Cannot do with Directory\n",      //FAT12_CLI_MUST_FILE
-    "ERR: Cannot do with File\n",           //FAT12_CLI_MUST_DIR
-    "ERR: Directory not found\n",           //FAT12_DIR_NOT_FOUND
-    "ERR: File not found\n",                 //FAT12_FILE_NOT_FOUND
-    "ERR: Directory existed\n",             //FAT12_DIR_EXISTED
-    "ERR: File existed\n",                   //FAT12_FILE_EXISTED
-    "ERR: No such file or directory\n",
+    "",                                                                 //FAT12_SUCCESS
+    "ERR: Full storage\n",                                              //FAT12_FULL_STORAGE
+    "ERR: Cmd not found. Call 'help' for command \n",                   //FAT12_CLI_UNFOUND_CMD
+    "ERR: Wrong number of agrs\n",                                      //FAT12_CLI_INVALID_CMD
+    "ERR: Cannot do with Directory\n",                                  //FAT12_CLI_MUST_FILE
+    "ERR: Cannot do with File\n",                                       //FAT12_CLI_MUST_DIR
+    "ERR: Directory not found\n",                                       //FAT12_DIR_NOT_FOUND
+    "ERR: File not found\n",                                            //FAT12_FILE_NOT_FOUND
+    "ERR: Directory existed\n",                                         //FAT12_DIR_EXISTED
+    "ERR: File existed\n",                                              //FAT12_FILE_EXISTED
+    "ERR: No such file or directory\n",                                 //FAT12_ITEM_NOT_FOUND
 };
 
 void msg_log(uint8_t msg){

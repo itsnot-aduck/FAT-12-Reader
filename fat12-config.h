@@ -3,6 +3,6 @@
 
 
 /* Enable debug */
-#define ENABLE_DEBUG
+// #define ENABLE_DEBUG
 #endif
 /* __FAT_12_CONFIG__ */

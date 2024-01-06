@@ -10,35 +10,35 @@ extern void FAT12_linked_list_remove();
 const cli_cmd_info_t cli_change_dir =
 {
     change_dir,
-    "Change Directory"
+    "<dir> \t Change Directory"
 };
 
 const cli_cmd_info_t cli_cat_file = 
 {
     cat_file,
-    "Read contents of file"
+    "<folder> \t Read contents of file"
 };
 
 const cli_cmd_info_t cli_make_dir = 
 {
     make_dir,
-    "Make a new directory"
+    "<dir_name> \t Make a new directory"
 };
 
 const cli_cmd_info_t cli_remove = 
 {
     remove_item,
-    "Remove a item"
+    "<item_name> \t Remove a item"
 };
 
 const cli_cmd_info_t cli_unmount = {
     unmount,
-    "Close file and exit program"
+    "<no arg> \t Close file and exit program"
 };
 
 const cli_cmd_info_t cli_list = {
     list_item,
-    "List all item"
+    "<no arg> \t List all item"
 };
 
 const cli_cmd_info_t cli_help = {
