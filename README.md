@@ -1,5 +1,6 @@
 # FAT-12-Reader
 C Program to Read FAT12 Floppy Disk 
+https://github.com/itsnot-aduck/FAT-12-Reader
 
 This project was made by:
 
@@ -12,3 +13,4 @@ This project was made by:
 - Dao Xuan Son: Make concept of reading items in folder, read root entry, file interaction (Create Folder) (20%)  
 
 This project may be buggy or defected and lead to unwanted experience
+
