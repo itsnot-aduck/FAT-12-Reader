@@ -10,8 +10,7 @@
 
 /* Initialize the instance of linked list*/
 file_entry_info *instance = NULL;
-static int size = 0;
-uint32_t current_Cluster = 0;
+int size = 0;
 
 typedef struct my_time {
     int year;
@@ -28,9 +27,9 @@ static void printFileAttribute(BYTE attribute);
 static void getWrtTimeFromFileEnt(const file_entry* ent, my_time* Cre_Time);
 static void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time);
 static uint32_t FAT12_Get_Available_Address();
-static void FAT12_Write_Folder_Info(int cluster);
+static void FAT12_Write_Folder_Info(uint16_t cluster);
 static void FAT12_linked_list_add(file_entry data, uint32_t address);
-static void FAT12_linked_list_remove();
+void FAT12_linked_list_remove();
 static uint32_t FAT12_Get_Cluster_Addr(int cluster);
 static void FAT12_Reload_Directory();
 static void printFileEntry(const file_entry *entry);
@@ -66,7 +65,7 @@ static void printFileAttribute(BYTE attribute) {
             printf("Volume Label");
             break;
         case FILE_ATTR_DIR:
-            printf("DIR\t");
+            printf("   DIR ");
             break;
         case FILE_ATTR_ARCH:
             printf("Archive");
@@ -108,55 +107,65 @@ static void getModiTimeFromFileEnt(const file_entry* ent, my_time* Mod_Time) {
 static uint32_t FAT12_Get_Available_Address(){
     uint32_t address;
     file_entry_info *pCursor = instance;
+    uint8_t found = 0;
     /* Find for available entry as deleted file */
     while(pCursor -> pNext != NULL){
         if (pCursor->data.DIR_Name[0] == 0xE5){
             address = pCursor->address;
+            found = 1;
             break;
         }
         pCursor = pCursor -> pNext;
     }
-    if(pCursor ->pNext == NULL){
+    if (!found){
         /* Available element is next to the last element */
         address = pCursor->address + 32;
     }
+
     log("Found available address at 0x%X", address);
     return address;
 }
 
-static void FAT12_Write_Folder_Info(int cluster){
-    int clusterAddr = ((cluster - 2) + 19 + 14) * 512;
+static void FAT12_Write_Folder_Info(uint16_t cluster){
+    uint64_t clusterAddr = ((cluster - 2) + 19 + 14) * 512;
+    log("addr: %X", clusterAddr);
     fseek(fptr, clusterAddr ,SEEK_SET);
-    log("Write first information of file on cluster %d", clusterAddr);
+    log("Write first information of file on cluster %X", clusterAddr);
     uint8_t chunk[64] = {0x2E, 0x20, 0x20, 0x20, 0x20,0x20,0x20,0x20,0x20,0x20,0x20, 0x10, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, cluster & 0xFF, cluster & 0xFF00, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, cluster & 0xFF, (cluster & 0xFF00)>>8, 0x00, 0x00, 0x00, 0x00,
                         0x2E, 0x2E, 0x20, 0x20, 0x20,0x20,0x20,0x20,0x20,0x20,0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, current_Cluster & 0xFF, current_Cluster & 0xFF00, 0x00, 0x00, 0x00};
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x7B, 0xBA, 0x38, current_Cluster & 0xFF, (current_Cluster & 0xFF00)>>8, 0x00, 0x00, 0x00};
     fwrite(chunk, sizeof(chunk), 1, fptr);
+    /* Clear the whole cluster */
+    for (int i = 0; i < (512 - 64); i++){
+        fputc(0x00, fptr);
+    }
     log("Insert information of folder successfully");
 }
 
 static void printFileEntry(const file_entry *entry) {
-    my_time Cre_Time;
-    my_time Mod_Time;
+    if(entry->DIR_Name[0] != 0xE5){
+        my_time Cre_Time;
+        my_time Mod_Time;
 
-    if (entry->DIR_Attr == FILE_ATTR_LSN || entry->DIR_Name[0] == 0xE5) {
-        return;
+        if (entry->DIR_Attr == FILE_ATTR_LSN || entry->DIR_Name[0] == 0xE5) {
+            return;
+        }
+
+        printf("%-20s", entry->DIR_Name);
+        printFileAttribute(entry->DIR_Attr);
+
+        getWrtTimeFromFileEnt(entry, &Cre_Time);
+        printf("%-20s", ""); // Độ rộng 20 kí tự trắng
+        printf("%04d-%02d-%02d %02d:%02d:%02d\t\t", Cre_Time.year, Cre_Time.month, Cre_Time.day, Cre_Time.hour,
+            Cre_Time.minute, Cre_Time.second);
+
+        getModiTimeFromFileEnt(entry, &Mod_Time);
+        printf("%04d-%02d-%02d %02d:%02d:%02d\t", Mod_Time.year, Mod_Time.month, Mod_Time.day, Mod_Time.hour,
+            Mod_Time.minute, Mod_Time.second);
+
+        printf("%u bytes\n", entry->DIR_FileSize);
     }
-
-    printf("%-20s", entry->DIR_Name);
-    printFileAttribute(entry->DIR_Attr);
-
-    getWrtTimeFromFileEnt(entry, &Cre_Time);
-    printf("%-20s", ""); // Độ rộng 20 kí tự trắng
-    printf("%04d-%02d-%02d %02d:%02d:%02d\t\t", Cre_Time.year, Cre_Time.month, Cre_Time.day, Cre_Time.hour,
-           Cre_Time.minute, Cre_Time.second);
-
-    getModiTimeFromFileEnt(entry, &Mod_Time);
-    printf("%04d-%02d-%02d %02d:%02d:%02d\t", Mod_Time.year, Mod_Time.month, Mod_Time.day, Mod_Time.hour,
-           Mod_Time.minute, Mod_Time.second);
-
-    printf("%u bytes\n", entry->DIR_FileSize);
 }
 
 void FAT12_linked_list_add(file_entry data, uint32_t address){
@@ -187,7 +196,7 @@ void FAT12_linked_list_add(file_entry data, uint32_t address){
     }
 }
 
-static void FAT12_linked_list_remove(){
+void FAT12_linked_list_remove(){
     if (size != 0 && instance != NULL){
         file_entry_info *pCursor = instance, *temp;
         while(pCursor -> pNext != NULL){
@@ -220,6 +229,7 @@ static void FAT12_Reload_Directory(){
 /* Public function definition */
 int FAT12_Create_Folder(const char* folderName) {
     /* Create instance for new folder */
+    log("Make new folder %s", folderName);
     file_entry newFolderEntry;
     /* Get position for new folder */
     uint32_t position = FAT12_Get_Available_Address();
@@ -247,6 +257,12 @@ int FAT12_Create_Folder(const char* folderName) {
     FAT12_Fat_Set_Full(newFolderEntry.DIR_FstClus);
 
     /* Re-move into the file */
+    fseek(fptr, position, SEEK_SET);
+    /* Clear the cluster */
+    for (int i = 0; i< 512; i++){
+        fputc(0x00, fptr);
+    }
+
     fseek(fptr, position, SEEK_SET);
     fwrite(&newFolderEntry, sizeof(file_entry), 1, fptr);
 
@@ -290,4 +306,43 @@ void FAT12_Directory_Export(){
         printFileEntry(&pCursor->data);
         pCursor = pCursor -> pNext;
     }
+}
+
+void FAT12_Remove_Item(file_entry_info *item){
+    fseek(fptr, item->address, SEEK_SET);
+    fputc(0xE5, fptr);
+    int cluster = item->data.DIR_FstClus;
+    int temp_cluster;
+    do{
+        temp_cluster = FAT12_Fat_Read(cluster);
+        FAT12_Fat_Free(cluster); 
+        log("temp clus 0x%X", temp_cluster);
+        cluster = temp_cluster;        
+    }
+    while(cluster != 0xFFF && cluster != 0x0);
+    FAT12_Reload_Directory();
+}
+
+
+FAT12_Status_t FAT12_Get_File_Content(int cluster){
+    FAT12_Status_t status = FAT12_COUNTERFEIT_FILE;
+    if (cluster >= 2){
+        status = FAT12_SUCCESS;
+        int clusterAddr = ((cluster - 2) + 19 + 14) * 512;
+        fseek(fptr, clusterAddr ,SEEK_SET);
+        char *buffer = (char*) malloc(513);
+        if(buffer != NULL){
+            fread(buffer, 1, 512, fptr);
+            printf("%s\n", buffer);
+            free(buffer);
+        }      
+        int next_cluster = FAT12_Fat_Read(cluster);
+        if(next_cluster != 0xFFF){
+            status = FAT12_Get_File_Content(next_cluster);
+        }        
+        else{
+            log("Got EOF element. Stop");
+        }
+    }
+    return status;
 }

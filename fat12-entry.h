@@ -46,10 +46,13 @@ typedef struct node{
 } file_entry_info;
 
 extern file_entry_info *instance;
+extern int size;
 
 void FAT12_GetDirectory(int cluster);
 void FAT12_Directory_Export();
 int FAT12_Create_Folder(const char* folderName);
+void FAT12_Remove_Item(file_entry_info *item);
+FAT12_Status_t FAT12_Get_File_Content(int cluster);
 
 #endif
 /* __FAT12_ENTRY_H__ */

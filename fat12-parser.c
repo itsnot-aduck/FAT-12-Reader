@@ -4,6 +4,7 @@
 
 FILE *fptr; 
 FAT12_BS_Stat_t FAT12_BS_Stat = {0};
+uint32_t current_Cluster = 0;
 
 void FAT12_BS_Param_Cal(){
     /* Calulate size of each part */
@@ -52,29 +53,6 @@ void FAT12_close_file(){
     if (fptr != NULL){
         fclose(fptr);       
     }
-}
-
-FAT12_Status_t FAT12_Get_File_Content(int cluster){
-    FAT12_Status_t status = FAT12_COUNTERFEIT_FILE;
-    if (cluster >= 2){
-        status = FAT12_SUCCESS;
-        int clusterAddr = ((cluster - 2) + 19 + 14) * 512;
-        fseek(fptr, clusterAddr ,SEEK_SET);
-        char *buffer = (char*) malloc(513);
-        if(buffer != NULL){
-            fread(buffer, 1, 512, fptr);
-            printf("%s\n", buffer);
-            free(buffer);
-        }      
-        int next_cluster = FAT12_Fat_Read(cluster);
-        if(next_cluster != 0xFFF){
-            status = FAT12_Get_File_Content(next_cluster);
-        }        
-        else{
-            log("Got EOF element. Stop");
-        }
-    }
-    return status;
 }
 
 

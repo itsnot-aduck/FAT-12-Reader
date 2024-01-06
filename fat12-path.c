@@ -16,6 +16,10 @@ typedef struct path_list{
 PathNode* path_list = NULL;
 uint8_t depth = 0;
 
+uint8_t PATH_Get_Depth(){
+    return depth;
+}
+
 void PATH_move_to_child(char* node){
     if (strstr(node, ".."))
     {   
@@ -61,14 +65,16 @@ void PATH_back_to_father(){
 }
 
 void PATH_back_to_root(){
-    PathNode *pCursor = path_list, *pTemp;
-    while(pCursor -> pNext != NULL){
-        pTemp = pCursor;
-        pCursor = pCursor -> pNext;
-        free(pTemp);
+    if(depth > 0){
+        PathNode *pCursor = path_list, *pTemp;
+        while(pCursor -> pNext != NULL){
+            pTemp = pCursor;
+            pCursor = pCursor -> pNext;
+            free(pTemp);
+        }
+        path_list = NULL;
+        depth = 0;
     }
-    path_list = NULL;
-    depth = 0;
 }
 
 void Path_Get_Current(){

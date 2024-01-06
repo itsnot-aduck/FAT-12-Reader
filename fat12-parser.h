@@ -5,6 +5,7 @@
 #include "fat12-config.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include "fat12-err.h"
 
 /* For logging */
 #ifdef ENABLE_DEBUG
@@ -26,14 +27,7 @@
 
 /* Public variable */
 
-/* Enum for reading status */
-typedef enum{
-    FAT12_SUCCESS,
-    FAT12_FILE_OPEN_FAILED,
-    FAT12_READ_INVALID_BS,
-    FAT12_COUNTERFEIT_FILE,
-    READ_FAILED
-} FAT12_Status_t;
+extern uint32_t current_Cluster;
 
 /* Enum of Bootsector segment information */
 #pragma pack(1)
@@ -83,7 +77,6 @@ extern FILE* fptr;
 /* Function Protototype */
 FAT12_Status_t FAT12_read_file(char* file);
 void FAT12_close_file();
-FAT12_Status_t FAT12_Get_File_Content(int cluster);
 
 
 #endif 
